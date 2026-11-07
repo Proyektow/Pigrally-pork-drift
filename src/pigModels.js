@@ -1,140 +1,166 @@
 import * as THREE from 'three';
 
-export function createOrganicPig(cosmetics = {}) {
-  const pigGroup = new THREE.Group();
-  const skinColor = cosmetics.skin || '#ff9bb2';
-  const hoofColor = '#4a2c11';
-  const snoutColor = '#ff6b8b';
+// Generador procedural de cerdos orgánicos, sombreros y accesorios con Three.js
+export function createOrganicPig(THREE, options = {}) {
+  const root = new THREE.Group();
+  const skinColor = options.skin || '#ff9cb3';
+  const hatType = options.hat || 'Sin gorro';
 
-  // Material cartoon sombreado suave
   const skinMat = new THREE.MeshStandardMaterial({
     color: skinColor,
-    roughness: 0.6,
-    metalness: 0.05
+    roughness: 0.55,
+    metalness: 0.05,
+    flatShading: true
   });
-
-  const snoutMat = new THREE.MeshStandardMaterial({ color: snoutColor, roughness: 0.7 });
+  const pinkMat = new THREE.MeshStandardMaterial({ color: '#ff6987', roughness: 0.7, flatShading: true });
+  const darkMat = new THREE.MeshStandardMaterial({ color: '#382215', roughness: 0.8 });
   const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.2 });
-  const eyePupilMat = new THREE.MeshBasicMaterial({ color: '#1a0e08' });
-  const hoofMat = new THREE.MeshStandardMaterial({ color: hoofColor, roughness: 0.8 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: '#f6c44e', metalness: 0.6, roughness: 0.3 });
 
-  // 1. Cuerpo regordete y aerodinámico
-  const bodyGeo = new THREE.SphereGeometry(0.85, 20, 16);
-  bodyGeo.scale(1.0, 0.88, 1.35);
-  const body = new THREE.Mesh(bodyGeo, skinMat);
-  body.position.y = 0.95;
-  body.castShadow = true;
-  pigGroup.add(body);
+  // 1. CUERPO
+  const bodyGeo = new THREE.SphereGeometry(0.85, 14, 12);
+  bodyGeo.scale(1.0, 0.85, 1.35);
+  const bodyMesh = new THREE.Mesh(bodyGeo, skinMat);
+  bodyMesh.position.y = 0.9;
+  bodyMesh.castShadow = true;
+  root.add(bodyMesh);
 
-  // 2. Cabeza expresiva
+  // Vientre rechoncho
+  const bellyGeo = new THREE.SphereGeometry(0.65, 10, 8);
+  bellyGeo.scale(0.88, 0.45, 0.95);
+  const bellyMesh = new THREE.Mesh(bellyGeo, pinkMat);
+  bellyMesh.position.set(0, 0.68, 0.15);
+  root.add(bellyMesh);
+
+  // 2. CABEZA
   const headGroup = new THREE.Group();
-  headGroup.position.set(0, 1.25, 0.8);
-  const headGeo = new THREE.SphereGeometry(0.62, 18, 16);
-  headGeo.scale(1.0, 0.92, 0.98);
-  const head = new THREE.Mesh(headGeo, skinMat);
-  head.castShadow = true;
-  headGroup.add(head);
+  headGroup.position.set(0, 1.25, 0.75);
+  root.add(headGroup);
 
-  // Hocico respingón característico
-  const snoutGeo = new THREE.CylinderGeometry(0.26, 0.3, 0.22, 16);
-  const snout = new THREE.Mesh(snoutGeo, snoutMat);
-  snout.rotation.x = Math.PI / 2;
-  snout.position.set(0, -0.08, 0.58);
-  headGroup.add(snout);
+  const headGeo = new THREE.SphereGeometry(0.62, 14, 12);
+  headGeo.scale(1.0, 0.9, 0.95);
+  const headMesh = new THREE.Mesh(headGeo, skinMat);
+  headMesh.castShadow = true;
+  headGroup.add(headMesh);
 
-  // Agujeros del hocico
+  // Hocico respingón
+  const snoutGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.2, 14);
+  const snoutMesh = new THREE.Mesh(snoutGeo, pinkMat);
+  snoutMesh.rotation.x = Math.PI / 2;
+  snoutMesh.position.set(0, -0.08, 0.58);
+  headGroup.add(snoutMesh);
+
   for (let s of [-0.08, 0.08]) {
-    const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), eyePupilMat);
-    nostril.position.set(s, -0.08, 0.7);
+    const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), darkMat);
+    nostril.position.set(s, -0.08, 0.69);
     headGroup.add(nostril);
   }
 
-  // Ojos tiernos y expresivos
+  // Ojos estilo Nintendo
   for (let s of [-0.26, 0.26]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), eyeWhiteMat);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), eyeWhiteMat);
     eye.position.set(s, 0.16, 0.46);
     headGroup.add(eye);
 
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), eyePupilMat);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), darkMat);
     pupil.position.set(s, 0.16, 0.55);
     headGroup.add(pupil);
   }
 
-  // Orejas flexibles con pivote para rebotar
+  // Orejas
   const ears = [];
   for (let s of [-1, 1]) {
     const earPivot = new THREE.Group();
-    earPivot.position.set(s * 0.42, 0.4, 0.05);
-    earPivot.rotation.z = s * -0.3;
-    const earMesh = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.48, 8), snoutMat);
-    earMesh.rotation.x = -0.3;
-    earMesh.position.y = 0.18;
-    earPivot.add(earMesh);
+    earPivot.position.set(s * 0.42, 0.38, 0.05);
+    earPivot.rotation.z = s * -0.32;
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.46, 6), pinkMat);
+    ear.rotation.x = -0.3;
+    ear.position.y = 0.18;
+    earPivot.add(ear);
     headGroup.add(earPivot);
     ears.push({ pivot: earPivot, side: s });
   }
-  pigGroup.add(headGroup);
 
-  // 3. Patas trotadoras independientes (sin ruedas)
+  // 3. PATAS CUADRÚPEDAS
   const legs = [];
-  const legPositions = [
-    [-0.45, 0.55, 0.6],  // Delantera izq
-    [0.45, 0.55, 0.6],   // Delantera dcha
-    [-0.48, 0.55, -0.6], // Trasera izq
-    [0.48, 0.55, -0.6]   // Trasera dcha
+  const coords = [
+    [-0.44, 0.55, 0.6],
+    [0.44, 0.55, 0.6],
+    [-0.46, 0.55, -0.6],
+    [0.46, 0.55, -0.6]
   ];
 
-  legPositions.forEach(([x, y, z], idx) => {
-    const legPivot = new THREE.Group();
-    legPivot.position.set(x, y, z);
+  coords.forEach(([x, y, z], i) => {
+    const p = new THREE.Group();
+    p.position.set(x, y, z);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.42, 7), skinMat);
+    upper.position.y = -0.18;
+    upper.castShadow = true;
+    p.add(upper);
 
-    // Muslo
-    const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.42, 10), skinMat);
-    thigh.position.y = -0.18;
-    thigh.castShadow = true;
-    legPivot.add(thigh);
-
-    // Pezuña dividida
-    const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.16, 0.22), hoofMat);
+    const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.22), darkMat);
     hoof.position.set(0, -0.42, 0.02);
     hoof.castShadow = true;
-    legPivot.add(hoof);
+    p.add(hoof);
 
-    pigGroup.add(legPivot);
-    legs.push({ pivot: legPivot, isRear: idx >= 2, side: x > 0 ? 1 : -1 });
+    root.add(p);
+    legs.push({ pivot: p, index: i });
   });
 
-  // 4. Rabito en espiral
-  const tailGroup = new THREE.Group();
-  tailGroup.position.set(0, 1.05, -1.1);
-  const tailGeo = new THREE.TorusGeometry(0.12, 0.045, 8, 16, Math.PI * 1.8);
-  const tail = new THREE.Mesh(tailGeo, skinMat);
-  tailGroup.add(tail);
-  pigGroup.add(tailGroup);
+  // 4. RABO EN ESPIRAL
+  const tailPivot = new THREE.Group();
+  tailPivot.position.set(0, 1.05, -1.1);
+  const tailMesh = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.04, 6, 12, Math.PI * 1.8), skinMat);
+  tailPivot.add(tailMesh);
+  root.add(tailPivot);
 
-  // Animación procedural sincronizada con la velocidad y derrape
-  pigGroup.userData.animate = (time, speed, isDrifting, steerInput) => {
-    const gaitFreq = time * (6 + speed * 1.6);
-    const moving = speed > 0.5;
+  // 5. SOMBREROS
+  let propMesh = null;
+  if (hatType === 'Hélice Pro') {
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: '#e53935' }));
+    cap.position.set(0, 0.48, 0.02);
+    headGroup.add(cap);
 
-    // Galope alternado de cuadrúpedo
-    legs.forEach((leg, i) => {
-      const phaseOffset = (i === 0 || i === 3) ? 0 : Math.PI;
-      const angle = moving ? Math.sin(gaitFreq + phaseOffset) * (0.35 + speed * 0.02) : 0;
-      leg.pivot.rotation.x = angle;
+    propMesh = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.04, 0.1), goldMat);
+    propMesh.position.set(0, 0.72, 0.02);
+    headGroup.add(propMesh);
+  } else if (hatType === 'Casco Vikingo') {
+    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.44, 8, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), new THREE.MeshStandardMaterial({ color: '#78909c' }));
+    helm.position.set(0, 0.44, 0);
+    headGroup.add(helm);
+    for (let s of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.48, 6), new THREE.MeshStandardMaterial({ color: '#fff9c4' }));
+      horn.position.set(s * 0.42, 0.62, 0);
+      horn.rotation.z = -s * 0.45;
+      headGroup.add(horn);
+    }
+  } else if (hatType === 'Corona Real') {
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.25, 6), goldMat);
+    crown.position.set(0, 0.52, 0);
+    headGroup.add(crown);
+  }
+
+  // Control de animación
+  root.userData.animate = (time, speed, isDrifting, steerAngle) => {
+    const moving = speed > 0.4;
+    const gait = time * (6 + Math.min(speed, 25) * 1.5);
+
+    legs.forEach(leg => {
+      const offset = (leg.index === 0 || leg.index === 3) ? 0 : Math.PI;
+      leg.pivot.rotation.x = moving ? Math.sin(gait + offset) * (0.32 + Math.min(speed, 20) * 0.02) : 0;
     });
 
-    // Inclinación del cerdo al tomar curvas (Banking centrífugo)
-    pigGroup.rotation.z = -steerInput * 0.22;
-    pigGroup.rotation.y = isDrifting ? steerInput * 0.45 : 0;
+    // Inclinación por fuerza centrífuga
+    root.rotation.z = -steerAngle * 0.18;
+    root.rotation.y = isDrifting ? steerAngle * 0.55 : 0;
 
-    // Rebote elástico de orejas y cabeza
     ears.forEach(e => {
-      e.pivot.rotation.x = Math.sin(gaitFreq * 1.2) * 0.15;
+      e.pivot.rotation.x = Math.sin(gait * 1.3) * 0.12;
     });
-    headGroup.rotation.x = Math.sin(gaitFreq) * 0.06;
-    tailGroup.rotation.z = Math.sin(time * 8) * 0.4;
+
+    tailPivot.rotation.z = Math.sin(time * 9) * 0.35;
+    if (propMesh) propMesh.rotation.y = time * 12;
   };
 
-  return pigGroup;
+  return root;
 }
