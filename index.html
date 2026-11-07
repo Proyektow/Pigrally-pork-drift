@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#ff8a5c">
-  <title>PigRally Tour: Pork Drift Deluxe</title>
+  <meta name="theme-color" content="#ff6f43">
+  <title>PigRally Tour: Deluxe Championship</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Lilita+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700;800&family=Lilita+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script type="importmap">
     {
@@ -17,156 +18,167 @@
   </script>
 </head>
 <body>
-  <!-- Canvas 3D -->
-  <div id="canvas-container"></div>
-  <div class="vignette-overlay"></div>
+  <!-- Contenedor 3D WebGL -->
+  <div id="game-stage"></div>
+  <div class="screen-vignette"></div>
 
-  <!-- Pantalla de Carga y Bienvenida -->
-  <div id="loader-screen" class="screen flex-center">
-    <div class="mkt-logo">
-      <span class="snout-badge">🐽</span>
-      <h1 class="logo-title">PIG RALLY<br><span class="tour-text">TOUR</span></h1>
-      <p class="subtitle">CAMPEONATO BARRIZAL DELUXE</p>
-    </div>
-    <div class="loading-bar-wrap">
-      <div id="loading-bar" class="loading-bar"></div>
-    </div>
-    <button id="tap-to-start" class="btn-primary pulse-btn hidden">¡TOCA PARA JUGAR!</button>
-  </div>
-
-  <!-- HUD Principal / Menú Estilo Mario Kart Tour -->
-  <div id="menu-hud" class="hud-layer hidden">
-    <!-- Barra Superior de Recursos -->
-    <header class="top-nav">
-      <div class="user-profile">
-        <div class="avatar-ring">🐷</div>
-        <div class="user-info">
-          <span class="pilot-label">PILOTO NV. <strong id="ui-level">1</strong></span>
-          <div class="xp-bar"><i id="ui-xp-fill"></i></div>
-        </div>
+  <!-- Capa de Interfaz Global -->
+  <div id="ui-root">
+    <!-- PANTALLA 1: Carga y Bienvenida -->
+    <section id="screen-loading" class="screen flex-col active">
+      <div class="mkt-badge-logo">
+        <div class="snout-hero">🐽</div>
+        <h1>PIG RALLY</h1>
+        <div class="tour-ribbon">TOUR DELUXE</div>
       </div>
-      <div class="currencies">
-        <div class="pill-chip coin-pill">🌽 <span id="ui-corn">120</span></div>
-        <div class="pill-chip gem-pill">💎 <span id="ui-gems">5</span></div>
-        <button id="btn-settings" class="btn-icon">⚙️</button>
+      <div class="progress-box">
+        <div id="progress-bar" class="progress-fill"></div>
       </div>
-    </header>
+      <button id="btn-enter-game" class="btn-giant hidden">¡TOCA PARA ENTRAR!</button>
+      <small class="dev-tag">CAMPEONATO MUNDIAL PORCINO</small>
+    </section>
 
-    <!-- Pestañas Centrales (Tour / Establos / Copas) -->
-    <main class="menu-carousel">
-      <!-- Pestaña 1: Gran Premio / Carrera -->
-      <section class="menu-page active" id="tab-tour">
-        <div class="cup-card-banner">
-          <div class="banner-badge">COPA ACTUAL</div>
-          <h2 class="banner-title">COPA BELLOTA DORADA</h2>
-          <div class="circuit-preview">
-            <span class="track-tag">Pista 1: BARRIZAL VELOZ</span>
-            <span class="laps-tag">3 VUELTAS · 100cc</span>
+    <!-- PANTALLA 2: Menú Principal Estilo Tour -->
+    <section id="screen-menu" class="screen flex-col hidden">
+      <!-- Barra superior de divisas y piloto -->
+      <header class="tour-header">
+        <div class="pilot-pill">
+          <div class="pilot-avatar" id="header-avatar">🐷</div>
+          <div class="pilot-meta">
+            <span class="pilot-title">PILOTO PRO</span>
+            <div class="pilot-lv">NV.<b id="val-level">1</b> <div class="mini-bar"><i id="val-xp"></i></div></div>
           </div>
-          <button id="btn-start-race" class="btn-giant-cta">
+        </div>
+        <div class="wallet-pill">
+          <div class="chip">🌽 <b id="val-corn">0</b></div>
+          <button id="btn-audio-toggle" class="btn-circle-action">🔊</button>
+        </div>
+      </header>
+
+      <!-- Carrusel / Contenido del Menú -->
+      <main class="menu-body">
+        <!-- Tarjeta de Carrera Activa -->
+        <div class="cup-showcase-card">
+          <div class="cup-tag">COPA EN JUEGO</div>
+          <h2 class="cup-title">GRAN PREMIO BARROSO</h2>
+          <div class="track-badge">
+            <span class="icon">🏁</span>
+            <span>Muddy Valley · Circuito 01</span>
+          </div>
+          <div class="cc-selector">
+            <button class="cc-btn active" data-cc="100">100cc (Normal)</button>
+            <button class="cc-btn" data-cc="150">150cc (Rápido)</button>
+          </div>
+          <button id="btn-start-race" class="btn-giant pulse">
             <span>¡CORRER!</span>
-            <small>CLASIFICACIÓN RALLY</small>
+            <small>3 VUELTAS · 4 CORREDORES</small>
           </button>
         </div>
 
-        <div class="gyro-callout">
-          <button id="btn-toggle-gyro" class="btn-gyro">
-            <span class="gyro-icon">📱</span>
-            <span id="gyro-status-text">Giroscopio Móvil: DESACTIVADO</span>
+        <!-- Ajustes de control: Giroscopio vs Touch -->
+        <div class="control-toggle-box">
+          <button id="btn-gyro-toggle" class="toggle-pill">
+            <span class="icon">📱</span>
+            <span id="txt-gyro">Giroscopio: DESACTIVADO</span>
           </button>
         </div>
-      </section>
+      </main>
 
-      <!-- Pestaña 2: Establos & Tunning -->
-      <section class="menu-page" id="tab-garage">
-        <div class="garage-panel">
-          <div class="pig-selector-carousel">
-            <button id="btn-prev-pig" class="btn-nav">◀</button>
-            <div class="selected-pig-card">
-              <span id="garage-pig-name">Porky Scout</span>
-              <small id="garage-pig-perk">Trotón Veloz · Gran Agarre</small>
-            </div>
-            <button id="btn-next-pig" class="btn-nav">▶</button>
-          </div>
-          
-          <div class="cosmetics-tray">
-            <div class="tabs-sub">
-              <button class="sub-tab active" data-subtab="skin">Color Piel</button>
-              <button class="sub-tab" data-subtab="hat">Gorros</button>
-              <button class="sub-tab" data-subtab="trail">Pisada</button>
-            </div>
-            <div id="cosmetics-options" class="options-grid"></div>
-          </div>
+      <!-- Barra de navegación inferior -->
+      <nav class="tour-bottom-nav">
+        <button class="nav-btn active" data-view="race-prep">
+          <span class="icon">🏆</span>
+          <span>Carrera</span>
+        </button>
+        <button class="nav-btn" data-view="garage">
+          <span class="icon">🐷</span>
+          <span>Cerdos</span>
+        </button>
+      </nav>
+
+      <!-- Panel Deslizante de Garaje -->
+      <div id="garage-drawer" class="drawer hidden">
+        <div class="drawer-header">
+          <h3>SELECCIONA TU CORREDOR</h3>
+          <button id="btn-close-garage" class="btn-circle-close">✕</button>
         </div>
-      </section>
-    </main>
-
-    <!-- Barra Inferior de Navegación Tipo App Móvil -->
-    <footer class="bottom-nav">
-      <button class="nav-item active" data-tab="tab-tour">
-        <span class="icon">🏁</span>
-        <span>Carrera</span>
-      </button>
-      <button class="nav-item" data-tab="tab-garage">
-        <span class="icon">🐷</span>
-        <span>Establo</span>
-      </button>
-    </footer>
-  </div>
-
-  <!-- HUD IN-GAME (Durante la Carrera) -->
-  <div id="race-hud" class="hud-layer hidden">
-    <!-- Superior: Posición, Vuelta y Tiempo -->
-    <div class="race-header">
-      <div class="position-badge">
-        <strong id="hud-pos">1</strong><span>/4</span>
-      </div>
-      <div class="lap-chip">
-        VUELTA <span id="hud-lap">1/3</span>
-      </div>
-      <div class="timer-chip" id="hud-timer">00:00.00</div>
-    </div>
-
-    <!-- Barra de Super Oink / Turbo -->
-    <div class="nitro-gauge-wrap">
-      <div class="nitro-title">🐽 SUPER OINK TURBO</div>
-      <div class="nitro-bar"><span id="nitro-fill"></span></div>
-      <button id="btn-use-nitro" class="btn-nitro-active" disabled>¡OINK!</button>
-    </div>
-
-    <!-- Minimapa estilo Radar Mario Kart -->
-    <div class="minimap-container">
-      <canvas id="minimap-canvas" width="130" height="90"></canvas>
-    </div>
-
-    <!-- Controles en Pantalla Táctil (Se ocultan si el giroscopio está al 100%) -->
-    <div id="touch-controls" class="touch-overlay">
-      <div class="steer-cluster">
-        <button id="btn-steer-left" class="btn-touch">◀</button>
-        <button id="btn-steer-right" class="btn-touch">▶</button>
-      </div>
-      <div class="actions-cluster">
-        <button id="btn-drift" class="btn-touch btn-drift">DERRAPE</button>
-        <button id="btn-gas" class="btn-touch btn-gas">GALOPE</button>
-      </div>
-    </div>
-
-    <!-- Cuenta Atrás 3, 2, 1, ¡SNORT! -->
-    <div id="countdown-banner" class="countdown-splash hidden">3</div>
-
-    <!-- Pantalla Fin de Carrera / Podium -->
-    <div id="results-modal" class="modal-backdrop hidden">
-      <div class="results-card">
-        <div id="results-medal" class="big-medal">🏆</div>
-        <h2 id="results-title">¡VICTORIA REAL!</h2>
-        <p id="results-subtitle">El rey de la piara se lleva la gloria.</p>
-        <div class="stats-recap">
-          <div><span>Tiempo:</span> <strong id="res-time">01:12.45</strong></div>
-          <div><span>Recompensa:</span> <strong id="res-corn">+50 🌽</strong></div>
+        <div class="garage-selector">
+          <button id="btn-prev-pig" class="btn-arrow">‹</button>
+          <div class="pig-data">
+            <h4 id="garage-pig-name">Porky Scout</h4>
+            <p id="garage-pig-perk">Equilibrado y fiel en curvas</p>
+          </div>
+          <button id="btn-next-pig" class="btn-arrow">›</button>
         </div>
-        <button id="btn-claim-rewards" class="btn-primary">CONTINUAR</button>
+        <!-- Barras de Estadísticas RPG -->
+        <div class="stats-matrix" id="stats-bars"></div>
+        <!-- Selector de Sombreros / Accesorios -->
+        <div class="hats-picker">
+          <small>EQUIPAR GORRO</small>
+          <div class="hats-row" id="hats-list"></div>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- PANTALLA 3: HUD Durante la Carrera -->
+    <section id="screen-race" class="screen hidden">
+      <!-- Cabecera de Carrera -->
+      <div class="race-hud-top">
+        <div class="position-badge">
+          <span class="num" id="hud-position">1</span><span class="denom">/4</span>
+        </div>
+        <div class="lap-counter">
+          VUELTA <strong id="hud-lap">1/3</strong>
+        </div>
+        <div class="timer-box" id="hud-timer">00:00.00</div>
+      </div>
+
+      <!-- Ruleta / Ranura de Objeto (Mario Kart Item Box) -->
+      <div class="item-slot-wrapper">
+        <button id="btn-use-item" class="item-slot" disabled>
+          <span id="item-icon">❓</span>
+        </button>
+      </div>
+
+      <!-- Barra de Derrape / Mini-Turbo Indicador -->
+      <div class="drift-indicator hidden" id="drift-meter">
+        <div class="drift-sparks" id="drift-spark-glow"></div>
+        <span>¡MINI-TURBO!</span>
+      </div>
+
+      <!-- Minimapa Radar -->
+      <div class="minimap-box">
+        <canvas id="minimap-cvs" width="120" height="90"></canvas>
+      </div>
+
+      <!-- Cuenta Atrás -->
+      <div id="race-countdown" class="countdown-overlay hidden">3</div>
+
+      <!-- Toast Flotante -->
+      <div id="hud-toast" class="hud-toast">¡TURBO!</div>
+
+      <!-- Área de Control Táctil (Arrastra para girar / Pulsa para derrapar) -->
+      <div id="touch-zone" class="touch-zone">
+        <div class="touch-hint">◀ Arrastra para girar · Toca y mantén para derrapar ▶</div>
+      </div>
+
+      <!-- Botón de Pausa -->
+      <button id="btn-pause" class="btn-pause">Ⅱ</button>
+
+      <!-- Pantalla de Podio / Victoria -->
+      <div id="results-modal" class="modal-card-center hidden">
+        <div class="modal-content">
+          <div class="trophy-emoji" id="res-trophy">🥇</div>
+          <h2 id="res-title">¡VICTORIA REAL!</h2>
+          <p id="res-desc">Dominaste cada curva del barrizal.</p>
+          <div class="res-stats">
+            <div><span>Tiempo:</span> <b id="res-time-val">00:00</b></div>
+            <div><span>Recompensa:</span> <b id="res-reward-val">+50 🌽</b></div>
+          </div>
+          <button id="btn-finish-continue" class="btn-giant">CONTINUAR</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script type="module" src="src/main.js"></script>
