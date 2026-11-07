@@ -1,0 +1,535 @@
+:root {
+  --coral: #ff5e36;
+  --gold: #ffbe0b;
+  --gold-shadow: #c78d00;
+  --cream: #fffdf5;
+  --dark-wood: #4a2c11;
+  --grass: #72b043;
+  --sky-top: #68c0ff;
+  --sky-bot: #c8ebff;
+  --font-main: 'Fredoka', sans-serif;
+  --font-display: 'Lilita One', cursive;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-main);
+  background: var(--sky-top);
+  color: var(--dark-wood);
+}
+
+#canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+#canvas-container canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.vignette-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.25);
+}
+
+.hud-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* --- BOTONES ESTILO NINTENDO/MKT --- */
+button {
+  font-family: var(--font-main);
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.95) translateY(2px);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #ff8c42, #ff5e36);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 20px;
+  padding: 14px 32px;
+  border-radius: 30px;
+  box-shadow: 0 6px 0 #b33919, 0 10px 15px rgba(0,0,0,0.2);
+  text-shadow: 0 2px 2px rgba(0,0,0,0.3);
+}
+
+.btn-giant-cta {
+  background: linear-gradient(180deg, #ffd000, #ff9e00);
+  color: #5d2f00;
+  border-radius: 26px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 7px 0 #ab6700, 0 12px 20px rgba(0,0,0,0.25);
+}
+.btn-giant-cta span {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+}
+.btn-giant-cta small {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+/* --- PANTALLA DE CARGA --- */
+#loader-screen {
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bot) 70%, var(--grass) 100%);
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+}
+
+.mkt-logo {
+  text-align: center;
+  margin-bottom: 25px;
+}
+.snout-badge {
+  font-size: 72px;
+  display: inline-block;
+  animation: float 2s infinite ease-in-out;
+}
+.logo-title {
+  font-family: var(--font-display);
+  font-size: 46px;
+  color: #fff;
+  text-shadow: 0 5px 0 #c23812, 0 8px 15px rgba(0,0,0,0.3);
+  line-height: 0.95;
+}
+.tour-text {
+  color: var(--gold);
+  text-shadow: 0 4px 0 #b37d00;
+}
+.subtitle {
+  font-weight: 800;
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  margin-top: 6px;
+}
+
+.loading-bar-wrap {
+  width: 240px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 3px solid #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+.loading-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #ffdb58, #ff8c42);
+  transition: width 0.3s;
+}
+
+/* --- MENÚ SUPERIOR --- */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.7) 100%);
+  border-bottom: 3px solid #e0d0b8;
+  backdrop-filter: blur(8px);
+}
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar-ring {
+  width: 44px;
+  height: 44px;
+  background: #ffc4be;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+.pilot-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6a4425;
+}
+.xp-bar {
+  width: 80px;
+  height: 8px;
+  background: #d8c4ae;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+.xp-bar i {
+  display: block;
+  width: 60%;
+  height: 100%;
+  background: #39b54a;
+}
+
+.currencies {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pill-chip {
+  background: #fff;
+  border: 2px solid #dfc79b;
+  padding: 5px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #cfb280;
+}
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 0 #cfb280;
+  font-size: 16px;
+}
+
+/* --- BANNER DE TOUR ESTILO MKT --- */
+.menu-carousel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.menu-page {
+  display: none;
+  width: 100%;
+  max-width: 420px;
+}
+.menu-page.active {
+  display: block;
+}
+
+.cup-card-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #fff7e6 100%);
+  border: 4px solid #ffbe0b;
+  border-radius: 28px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 10px 0 #c78d00, 0 16px 30px rgba(0,0,0,0.25);
+  position: relative;
+}
+.banner-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff5e36;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+}
+.banner-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #ff5e36;
+  margin-top: 8px;
+}
+.circuit-preview {
+  margin: 14px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.track-tag {
+  font-weight: 800;
+  font-size: 14px;
+  color: #634327;
+}
+.laps-tag {
+  font-size: 11px;
+  color: #9c7b5c;
+  font-weight: 700;
+}
+
+.gyro-callout {
+  margin-top: 15px;
+  text-align: center;
+}
+.btn-gyro {
+  background: #ffffff;
+  border: 2px solid #72b043;
+  color: #3f6820;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 0 #578a30;
+}
+.btn-gyro.enabled {
+  background: #e6ffcf;
+  border-color: #39b54a;
+}
+
+/* --- NAVEGACIÓN INFERIOR --- */
+.bottom-nav {
+  display: flex;
+  background: #fff;
+  border-top: 3px solid #dfc79b;
+  padding: 8px 20px max(12px, env(safe-area-inset-bottom));
+  justify-content: space-around;
+}
+.nav-item {
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #9c7f65;
+  font-weight: 700;
+  font-size: 11px;
+}
+.nav-item .icon {
+  font-size: 22px;
+}
+.nav-item.active {
+  color: var(--coral);
+}
+
+/* --- HUD DE CARRERA --- */
+.race-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+}
+.position-badge {
+  background: #ff5e36;
+  color: #fff;
+  border: 3px solid #fff;
+  border-radius: 18px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 0 #b33919;
+}
+.position-badge strong {
+  font-family: var(--font-display);
+  font-size: 28px;
+}
+.lap-chip, .timer-chip {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 3px 0 #cfb280;
+}
+
+.nitro-gauge-wrap {
+  position: absolute;
+  top: 75px;
+  left: 20px;
+  width: 140px;
+  pointer-events: auto;
+}
+.nitro-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.7);
+}
+.nitro-bar {
+  height: 12px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 3px 0;
+}
+.nitro-bar span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #ffc400, #ff5500);
+}
+.btn-nitro-active {
+  background: #ffbe0b;
+  color: #5d2f00;
+  font-family: var(--font-display);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #ab6700;
+}
+.btn-nitro-active:disabled {
+  opacity: 0.4;
+}
+
+.minimap-container {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(40, 70, 30, 0.65);
+  border: 3px solid #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* --- CONTROLES TÁCTILES --- */
+.touch-overlay {
+  position: absolute;
+  bottom: 24px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.steer-cluster, .actions-cluster {
+  display: flex;
+  gap: 12px;
+}
+.btn-touch {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  border: 3px solid #ffbe0b;
+  box-shadow: 0 6px 0 #c78d00;
+  font-size: 22px;
+  font-weight: 800;
+  color: #5d2f00;
+}
+.btn-gas {
+  width: 78px;
+  height: 78px;
+  background: #ff5e36;
+  border-color: #fff;
+  color: #fff;
+  box-shadow: 0 7px 0 #b33919;
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+.btn-drift {
+  background: #00b4d8;
+  border-color: #fff;
+  color: #fff;
+  box-shadow: 0 6px 0 #0077b6;
+  font-size: 11px;
+}
+
+/* --- CUENTA ATRÁS --- */
+.countdown-splash {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 120px;
+  color: #fff;
+  text-shadow: 0 8px 0 #ff5e36, 0 14px 25px rgba(0,0,0,0.5);
+  animation: popCount 0.6s infinite alternate;
+}
+
+/* --- MODAL RESULTADOS --- */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+.results-card {
+  width: 90%;
+  max-width: 340px;
+  background: #fff;
+  border: 5px solid var(--gold);
+  border-radius: 30px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 10px 0 var(--gold-shadow);
+}
+.big-medal {
+  font-size: 58px;
+  animation: bounce 0.6s infinite alternate;
+}
+.results-card h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--coral);
+}
+.stats-recap {
+  margin: 16px 0;
+  background: #fff8eb;
+  padding: 12px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-around;
+  font-weight: 700;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes bounce {
+  to { transform: translateY(-8px); }
+}
+@keyframes popCount {
+  from { transform: scale(0.85); }
+  to { transform: scale(1.15); }
+}
