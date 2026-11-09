@@ -1,79 +1,128 @@
 import * as THREE from 'three';
-import { createOrganicPig } from './pigModels.js';
+import { buildPigRacer } from './pigModels.js';
 
-// IA de rivales con comportamientos tácticos, rubber-banding y colisiones
-export class RivalPigsManager {
-  constructor(THREE, scene, track) {
-    this.track = track;
+const RIVAL_PROFILES = [
+  {
+    name: 'Baconator',
+    skin: '#f4a27e',
+    snout: '#d96b43',
+    ear: '#e08358',
+    hat: 'Casco Vikingo',
+    baseLane: -2.0,
+    skill: 0.97
+  },
+  {
+    name: 'Lola Trufa',
+    skin: '#d7a1f9',
+    snout: '#ab51e3',
+    ear: '#c07be8',
+    hat: 'Corona Real',
+    baseLane: 0.0,
+    skill: 1.01
+  },
+  {
+    name: 'Capitán Jamón',
+    skin: '#8fd694',
+    snout: '#4ca853',
+    ear: '#6ec274',
+    hat: 'Gafas Aviador',
+    baseLane: 2.0,
+    skill: 1.04
+  }
+];
+
+export class RivalsController {
+  constructor(scene, circuit) {
     this.scene = scene;
-    this.rivals = [
-      { name: 'Grit', skin: '#d8a280', hat: 'Casco Vikingo', t: 0.2, speed: 0, stun: 0, laps: 0, lane: -1.8 },
-      { name: 'Muddy', skin: '#756050', hat: 'Sin gorro', t: 0.5, speed: 0, stun: 0, laps: 0, lane: 0.0 },
-      { name: 'Dash', skin: '#ffa5be', hat: 'Hélice Pro', t: 0.8, speed: 0, stun: 0, laps: 0, lane: 1.8 }
-    ];
-
-    this.rivals.forEach(r => {
-      r.pig = createOrganicPig(THREE, { skin: r.skin, hat: r.hat });
-      scene.add(r.pig);
+    this.circuit = circuit;
+    this.rivals = RIVAL_PROFILES.map((prof, idx) => {
+      const mesh = buildPigRacer(prof);
+      scene.add(mesh);
+      return {
+        ...prof,
+        mesh,
+        t: 0.015 * (idx + 1),
+        laps: 0,
+        speed: 0,
+        lane: prof.baseLane,
+        spinTimer: 0,
+        shrinkTimer: 0,
+        pos: new THREE.Vector3(),
+        yaw: 0
+      };
     });
   }
 
-  reset() {
+  resetForRace() {
     this.rivals.forEach((r, idx) => {
-      r.t = 0.2 + idx * 0.3;
-      r.speed = 0;
-      r.stun = 0;
+      r.t = 0.014 * (idx + 1);
       r.laps = 0;
+      r.speed = 0;
+      r.lane = r.baseLane;
+      r.spinTimer = 0;
+      r.shrinkTimer = 0;
+      const f = this.circuit.getPointFrame(r.t, r.lane);
+      r.pos.copy(f.pos);
+      r.yaw = f.yaw;
+      r.mesh.position.copy(r.pos);
+      r.mesh.rotation.y = r.yaw;
     });
   }
 
-  update(dt, time, playerTotalT, playerSpeed, ccSpeedFactor = 1.0) {
+  setVisible(vis) {
+    this.rivals.forEach(r => { r.mesh.visible = vis; });
+  }
+
+  update(dt, time, playerProgress, ccMultiplier) {
+    const trackLenApprox = 185;
+
     this.rivals.forEach((r, idx) => {
-      if (r.stun > 0) {
-        r.stun -= dt;
-        r.speed = Math.max(0, r.speed - 12 * dt);
+      if (r.shrinkTimer > 0) r.shrinkTimer -= dt;
+
+      if (r.spinTimer > 0) {
+        r.spinTimer -= dt;
+        r.speed = Math.max(2, r.speed - 22 * dt);
       } else {
-        // Rubber-banding sutil al estilo Mario Kart Tour
-        const myTotalT = r.laps * Math.PI * 2 + r.t;
-        const diff = playerTotalT - myTotalT;
-        const catchup = THREE.MathUtils.clamp(diff * 0.45, -2.5, 3.5);
-        const baseSpeed = (14.5 + idx * 0.6 + catchup) * ccSpeedFactor;
-
-        r.speed += (baseSpeed - r.speed) * Math.min(1, dt * 2.5);
+        const myProgress = r.laps + r.t;
+        const gap = playerProgress - myProgress;
+        // Rubber-banding equilibrado
+        const rubberBoost = THREE.MathUtils.clamp(gap * 4.5, -2.2, 3.4);
+        const shrinkPenalty = r.shrinkTimer > 0 ? 0.68 : 1.0;
+        const targetSpeed = (16.2 * r.skill + rubberBoost) * ccMultiplier * shrinkPenalty;
+        r.speed += (targetSpeed - r.speed) * Math.min(1, dt * 3.0);
       }
 
-      // Avance sobre el circuito
-      const angularStep = (r.speed / 24) * dt;
-      r.t += angularStep;
-      if (r.t >= Math.PI * 2) {
-        r.t -= Math.PI * 2;
-        r.laps++;
+      const prevT = r.t;
+      r.t = (r.t + (r.speed * dt) / trackLenApprox) % 1;
+      if (prevT > 0.85 && r.t < 0.15) {
+        r.laps += 1;
       }
 
-      const p = this.track.getSplinePose(r.t, r.lane);
-      r.pig.position.set(p.x, p.y, p.z);
-      r.pig.rotation.y = -p.yaw + Math.PI / 2;
-      r.pig.userData.animate(time, r.speed, false, 0);
+      const dynamicLane = r.baseLane + Math.sin(time * 0.9 + idx * 2.1) * 1.1;
+      const frame = this.circuit.getPointFrame(r.t, dynamicLane);
+      r.pos.copy(frame.pos);
+      r.yaw = frame.yaw;
+
+      r.mesh.position.copy(r.pos);
+      r.mesh.rotation.y = r.spinTimer > 0 ? r.yaw + time * 14 : r.yaw;
+      r.mesh.userData.updateAnimation(time, r.speed, 0, 0, 0, r.shrinkTimer > 0);
     });
   }
 
-  checkPigCollisions(playerX, playerZ, onBump) {
+  resolveCollisions(playerState, onBumpCallback) {
     this.rivals.forEach(r => {
-      const d = Math.hypot(playerX - r.pig.position.x, playerZ - r.pig.position.z);
-      if (d < 1.6) {
-        // Empujón elástico mutuo
-        onBump(r.pig.position.x, r.pig.position.z);
-        r.speed *= 0.7;
+      const dx = playerState.x - r.pos.x;
+      const dz = playerState.z - r.pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 1.55 && dist > 0.001) {
+        const nx = dx / dist;
+        const nz = dz / dist;
+        const push = (1.55 - dist) * 0.85;
+        playerState.x += nx * push;
+        playerState.z += nz * push;
+        r.speed *= 0.86;
+        onBumpCallback();
       }
     });
-  }
-
-  getRankList(playerTotalT) {
-    const list = [{ isPlayer: true, t: playerTotalT }];
-    this.rivals.forEach(r => {
-      list.push({ isPlayer: false, t: r.laps * Math.PI * 2 + r.t });
-    });
-    list.sort((a, b) => b.t - a.t);
-    return list.findIndex(item => item.isPlayer) + 1;
   }
 }
