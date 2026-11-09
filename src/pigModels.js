@@ -1,165 +1,256 @@
 import * as THREE from 'three';
 
-// Generador procedural de cerdos orgánicos, sombreros y accesorios con Three.js
-export function createOrganicPig(THREE, options = {}) {
+export function buildPigRacer(config = {}) {
   const root = new THREE.Group();
-  const skinColor = options.skin || '#ff9cb3';
-  const hatType = options.hat || 'Sin gorro';
+  const bodyPivot = new THREE.Group();
+  root.add(bodyPivot);
 
-  const skinMat = new THREE.MeshStandardMaterial({
+  const skinColor = config.skin || '#ff9ebb';
+  const snoutColor = config.snout || '#ff6b93';
+  const earColor = config.ear || '#ff7fa0';
+  const hatName = config.hat || 'Sin Gorro';
+
+  const matSkin = new THREE.MeshStandardMaterial({
     color: skinColor,
     roughness: 0.55,
-    metalness: 0.05,
+    metalness: 0.04,
     flatShading: true
   });
-  const pinkMat = new THREE.MeshStandardMaterial({ color: '#ff6987', roughness: 0.7, flatShading: true });
-  const darkMat = new THREE.MeshStandardMaterial({ color: '#382215', roughness: 0.8 });
-  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.2 });
-  const goldMat = new THREE.MeshStandardMaterial({ color: '#f6c44e', metalness: 0.6, roughness: 0.3 });
+  const matSnout = new THREE.MeshStandardMaterial({
+    color: snoutColor,
+    roughness: 0.6,
+    flatShading: true
+  });
+  const matEar = new THREE.MeshStandardMaterial({
+    color: earColor,
+    roughness: 0.6,
+    flatShading: true
+  });
+  const matDark = new THREE.MeshStandardMaterial({ color: '#2b1911', roughness: 0.8 });
+  const matWhite = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.2 });
+  const matGold = new THREE.MeshStandardMaterial({ color: '#ffca28', metalness: 0.55, roughness: 0.3 });
 
-  // 1. CUERPO
-  const bodyGeo = new THREE.SphereGeometry(0.85, 14, 12);
-  bodyGeo.scale(1.0, 0.85, 1.35);
-  const bodyMesh = new THREE.Mesh(bodyGeo, skinMat);
-  bodyMesh.position.y = 0.9;
-  bodyMesh.castShadow = true;
-  root.add(bodyMesh);
+  // 1. Torso orgánico regordete
+  const torsoGeo = new THREE.SphereGeometry(0.84, 16, 14);
+  torsoGeo.scale(0.96, 0.84, 1.32);
+  const torso = new THREE.Mesh(torsoGeo, matSkin);
+  torso.position.set(0, 0.88, 0);
+  torso.castShadow = true;
+  torso.receiveShadow = true;
+  bodyPivot.add(torso);
 
-  // Vientre rechoncho
-  const bellyGeo = new THREE.SphereGeometry(0.65, 10, 8);
-  bellyGeo.scale(0.88, 0.45, 0.95);
-  const bellyMesh = new THREE.Mesh(bellyGeo, pinkMat);
-  bellyMesh.position.set(0, 0.68, 0.15);
-  root.add(bellyMesh);
+  // Barriga rosada
+  const bellyGeo = new THREE.SphereGeometry(0.64, 12, 10);
+  bellyGeo.scale(0.85, 0.45, 1.05);
+  const belly = new THREE.Mesh(bellyGeo, matSnout);
+  belly.position.set(0, 0.58, 0.08);
+  bodyPivot.add(belly);
 
-  // 2. CABEZA
-  const headGroup = new THREE.Group();
-  headGroup.position.set(0, 1.25, 0.75);
-  root.add(headGroup);
+  // 2. Cabeza expresiva con pivote de balanceo
+  const headPivot = new THREE.Group();
+  headPivot.position.set(0, 1.24, 0.78);
+  bodyPivot.add(headPivot);
 
-  const headGeo = new THREE.SphereGeometry(0.62, 14, 12);
-  headGeo.scale(1.0, 0.9, 0.95);
-  const headMesh = new THREE.Mesh(headGeo, skinMat);
+  const headGeo = new THREE.SphereGeometry(0.6, 16, 14);
+  headGeo.scale(1.0, 0.92, 0.96);
+  const headMesh = new THREE.Mesh(headGeo, matSkin);
   headMesh.castShadow = true;
-  headGroup.add(headMesh);
+  headPivot.add(headMesh);
 
-  // Hocico respingón
-  const snoutGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.2, 14);
-  const snoutMesh = new THREE.Mesh(snoutGeo, pinkMat);
+  // Hocico
+  const snoutMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.29, 0.22, 14), matSnout);
   snoutMesh.rotation.x = Math.PI / 2;
-  snoutMesh.position.set(0, -0.08, 0.58);
-  headGroup.add(snoutMesh);
+  snoutMesh.position.set(0, -0.08, 0.56);
+  snoutMesh.castShadow = true;
+  headPivot.add(snoutMesh);
 
-  for (let s of [-0.08, 0.08]) {
-    const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), darkMat);
-    nostril.position.set(s, -0.08, 0.69);
-    headGroup.add(nostril);
+  // Fosas nasales
+  for (const side of [-0.09, 0.09]) {
+    const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.048, 8, 8), matDark);
+    nostril.position.set(side, -0.08, 0.67);
+    headPivot.add(nostril);
   }
 
-  // Ojos estilo Nintendo
-  for (let s of [-0.26, 0.26]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), eyeWhiteMat);
-    eye.position.set(s, 0.16, 0.46);
-    headGroup.add(eye);
+  // Ojos grandes con brillo
+  for (const side of [-0.25, 0.25]) {
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 10), matWhite);
+    eyeWhite.position.set(side, 0.15, 0.46);
+    headPivot.add(eyeWhite);
 
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), darkMat);
-    pupil.position.set(s, 0.16, 0.55);
-    headGroup.add(pupil);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.062, 8, 8), matDark);
+    pupil.position.set(side, 0.15, 0.55);
+    headPivot.add(pupil);
+
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.024, 6, 6), matWhite);
+    shine.position.set(side + 0.025, 0.18, 0.59);
+    headPivot.add(shine);
   }
 
-  // Orejas
+  // Orejas articuladas
   const ears = [];
-  for (let s of [-1, 1]) {
+  for (const side of [-1, 1]) {
     const earPivot = new THREE.Group();
-    earPivot.position.set(s * 0.42, 0.38, 0.05);
-    earPivot.rotation.z = s * -0.32;
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.46, 6), pinkMat);
-    ear.rotation.x = -0.3;
-    ear.position.y = 0.18;
-    earPivot.add(ear);
-    headGroup.add(earPivot);
-    ears.push({ pivot: earPivot, side: s });
+    earPivot.position.set(side * 0.4, 0.38, 0.04);
+    earPivot.rotation.z = side * -0.32;
+
+    const earCone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.46, 8), matEar);
+    earCone.position.y = 0.18;
+    earCone.rotation.x = -0.25;
+    earCone.castShadow = true;
+    earPivot.add(earCone);
+
+    headPivot.add(earPivot);
+    ears.push({ pivot: earPivot, side });
   }
 
-  // 3. PATAS CUADRÚPEDAS
+  // 3. Cuatro patas independientes con pezuñas (Sin ruedas)
   const legs = [];
-  const coords = [
-    [-0.44, 0.55, 0.6],
-    [0.44, 0.55, 0.6],
-    [-0.46, 0.55, -0.6],
-    [0.46, 0.55, -0.6]
+  const legCoords = [
+    { x: -0.44, y: 0.54, z: 0.58, phase: 0 },
+    { x: 0.44, y: 0.54, z: 0.58, phase: Math.PI },
+    { x: -0.46, y: 0.54, z: -0.58, phase: Math.PI },
+    { x: 0.46, y: 0.54, z: -0.58, phase: 0 }
   ];
 
-  coords.forEach(([x, y, z], i) => {
-    const p = new THREE.Group();
-    p.position.set(x, y, z);
-    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.42, 7), skinMat);
-    upper.position.y = -0.18;
-    upper.castShadow = true;
-    p.add(upper);
+  legCoords.forEach(c => {
+    const legPivot = new THREE.Group();
+    legPivot.position.set(c.x, c.y, c.z);
 
-    const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.22), darkMat);
-    hoof.position.set(0, -0.42, 0.02);
+    const upperLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.38, 9), matSkin);
+    upperLeg.position.y = -0.16;
+    upperLeg.castShadow = true;
+    legPivot.add(upperLeg);
+
+    const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.15, 0.23), matDark);
+    hoof.position.set(0, -0.39, 0.03);
     hoof.castShadow = true;
-    p.add(hoof);
+    legPivot.add(hoof);
 
-    root.add(p);
-    legs.push({ pivot: p, index: i });
+    bodyPivot.add(legPivot);
+    legs.push({ pivot: legPivot, phase: c.phase });
   });
 
-  // 4. RABO EN ESPIRAL
+  // 4. Rabito rizado en espiral
   const tailPivot = new THREE.Group();
-  tailPivot.position.set(0, 1.05, -1.1);
-  const tailMesh = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.04, 6, 12, Math.PI * 1.8), skinMat);
-  tailPivot.add(tailMesh);
-  root.add(tailPivot);
+  tailPivot.position.set(0, 1.0, -1.06);
+  const tailTorus = new THREE.Mesh(
+    new THREE.TorusGeometry(0.13, 0.042, 8, 16, Math.PI * 1.85),
+    matSnout
+  );
+  tailPivot.add(tailTorus);
+  bodyPivot.add(tailPivot);
 
-  // 5. SOMBREROS
-  let propMesh = null;
-  if (hatType === 'Hélice Pro') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: '#e53935' }));
-    cap.position.set(0, 0.48, 0.02);
-    headGroup.add(cap);
+  // 5. Cosméticos / Gorros
+  let propellerBlade = null;
+  if (hatName === 'Gorra Hélice') {
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.38, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.MeshStandardMaterial({ color: '#ff3d00', roughness: 0.4 })
+    );
+    dome.position.set(0, 0.42, 0);
+    headPivot.add(dome);
 
-    propMesh = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.04, 0.1), goldMat);
-    propMesh.position.set(0, 0.72, 0.02);
-    headGroup.add(propMesh);
-  } else if (hatType === 'Casco Vikingo') {
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.44, 8, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), new THREE.MeshStandardMaterial({ color: '#78909c' }));
-    helm.position.set(0, 0.44, 0);
-    headGroup.add(helm);
-    for (let s of [-1, 1]) {
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.48, 6), new THREE.MeshStandardMaterial({ color: '#fff9c4' }));
-      horn.position.set(s * 0.42, 0.62, 0);
-      horn.rotation.z = -s * 0.45;
-      headGroup.add(horn);
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.18, 6), matGold);
+    pin.position.set(0, 0.65, 0);
+    headPivot.add(pin);
+
+    propellerBlade = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.035, 0.11), matGold);
+    propellerBlade.position.set(0, 0.73, 0);
+    headPivot.add(propellerBlade);
+  } else if (hatName === 'Casco Vikingo') {
+    const helm = new THREE.Mesh(
+      new THREE.SphereGeometry(0.43, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.MeshStandardMaterial({ color: '#78909c', metalness: 0.4, roughness: 0.4 })
+    );
+    helm.position.set(0, 0.4, 0);
+    headPivot.add(helm);
+
+    for (const s of [-1, 1]) {
+      const horn = new THREE.Mesh(
+        new THREE.ConeGeometry(0.095, 0.48, 8),
+        new THREE.MeshStandardMaterial({ color: '#fff8e1' })
+      );
+      horn.position.set(s * 0.44, 0.58, 0);
+      horn.rotation.z = -s * 0.48;
+      headPivot.add(horn);
     }
-  } else if (hatType === 'Corona Real') {
-    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.25, 6), goldMat);
+  } else if (hatName === 'Corona Real') {
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.26, 7), matGold);
     crown.position.set(0, 0.52, 0);
-    headGroup.add(crown);
+    headPivot.add(crown);
+  } else if (hatName === 'Gafas Aviador') {
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 16), matDark);
+    strap.rotation.x = Math.PI / 2;
+    strap.position.set(0, 0.25, 0);
+    headPivot.add(strap);
+
+    for (const s of [-0.22, 0.22]) {
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 12), matGold);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(s, 0.26, 0.52);
+      headPivot.add(rim);
+    }
   }
 
-  // Control de animación
-  root.userData.animate = (time, speed, isDrifting, steerAngle) => {
-    const moving = speed > 0.4;
-    const gait = time * (6 + Math.min(speed, 25) * 1.5);
+  // 6. Globos / Auras de Chispas de Derrape Traseros
+  const sparkOrbs = [];
+  const sparkMat = new THREE.MeshBasicMaterial({ color: '#00d2ff' });
+  for (const s of [-0.52, 0.52]) {
+    const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), sparkMat);
+    orb.position.set(s, 0.26, -0.78);
+    orb.visible = false;
+    bodyPivot.add(orb);
+    sparkOrbs.push(orb);
+  }
 
+  // Función de actualización cinemática por frame
+  root.userData.updateAnimation = (time, speed, steerAmount, driftSlipAngle, sparkTier = 0, shrunk = false) => {
+    const targetScale = shrunk ? 0.55 : 1.0;
+    root.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
+
+    const gaitSpeed = time * (5.5 + Math.min(speed, 28) * 1.45);
+    const isMoving = speed > 0.35;
+
+    // Galope de las 4 patas
     legs.forEach(leg => {
-      const offset = (leg.index === 0 || leg.index === 3) ? 0 : Math.PI;
-      leg.pivot.rotation.x = moving ? Math.sin(gait + offset) * (0.32 + Math.min(speed, 20) * 0.02) : 0;
+      const swing = isMoving
+        ? Math.sin(gaitSpeed + leg.phase) * (0.28 + Math.min(speed, 22) * 0.022)
+        : 0;
+      leg.pivot.rotation.x = swing;
     });
 
-    // Inclinación por fuerza centrífuga
-    root.rotation.z = -steerAngle * 0.18;
-    root.rotation.y = isDrifting ? steerAngle * 0.55 : 0;
+    // Rebote vertical del cuerpo al galopar
+    bodyPivot.position.y = isMoving ? Math.abs(Math.sin(gaitSpeed)) * 0.09 : 0;
 
+    // Inclinación centrífuga (banking) + ángulo de derrape (slip angle)
+    bodyPivot.rotation.z = THREE.MathUtils.lerp(bodyPivot.rotation.z, -steerAmount * 0.26, 0.18);
+    bodyPivot.rotation.y = THREE.MathUtils.lerp(bodyPivot.rotation.y, driftSlipAngle, 0.18);
+
+    // Orejas y cabeza
     ears.forEach(e => {
-      e.pivot.rotation.x = Math.sin(gait * 1.3) * 0.12;
+      e.pivot.rotation.x = Math.sin(gaitSpeed * 1.15 + e.side) * 0.14;
     });
+    headPivot.rotation.x = Math.sin(gaitSpeed) * 0.055;
+    tailPivot.rotation.z = Math.sin(time * 10) * 0.4;
 
-    tailPivot.rotation.z = Math.sin(time * 9) * 0.35;
-    if (propMesh) propMesh.rotation.y = time * 12;
+    if (propellerBlade) {
+      propellerBlade.rotation.y = time * (8 + speed * 0.8);
+    }
+
+    // Chispas de Mini-Turbo en las patas traseras
+    sparkOrbs.forEach((orb, idx) => {
+      if (sparkTier > 0) {
+        orb.visible = true;
+        const colorHex = sparkTier === 3 ? '#e040fb' : sparkTier === 2 ? '#ff9100' : '#00d2ff';
+        orb.material.color.set(colorHex);
+        const pulse = (0.7 + sparkTier * 0.28) * (0.85 + Math.sin(time * 28 + idx) * 0.25);
+        orb.scale.setScalar(pulse);
+        orb.rotation.y += 0.25;
+        orb.rotation.z += 0.18;
+      } else {
+        orb.visible = false;
+      }
+    });
   };
 
   return root;
