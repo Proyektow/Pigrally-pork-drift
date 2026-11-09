@@ -1,136 +1,192 @@
-// Motor de Audio Procedimental Sintetizado con Web Audio API (Música + Efectos)
-export class AudioController {
-  constructor() {
+export class SoundSystem {
+  constructor(initiallyMuted = false) {
     this.ctx = null;
     this.master = null;
-    this.muted = false;
-    this.bgmInterval = null;
-    this.step = 0;
+    this.muted = initiallyMuted;
+    this.bgmTimer = null;
+    this.stepIndex = 0;
+    this.lastHoofTime = 0;
+    this.lastSkidTime = 0;
   }
 
   init() {
     if (this.ctx) return;
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    this.ctx = new AudioContextClass();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    this.ctx = new AudioCtx();
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.28;
+    this.master.gain.value = this.muted ? 0 : 0.26;
     this.master.connect(this.ctx.destination);
   }
 
-  wake() {
+  unlock() {
     this.init();
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
 
-  setMute(state) {
-    this.muted = state;
-    if (this.master) {
-      this.master.gain.setValueAtTime(this.muted ? 0 : 0.28, this.ctx.currentTime);
+  setMuted(muteState) {
+    this.muted = muteState;
+    if (this.master && this.ctx) {
+      this.master.gain.setTargetAtTime(this.muted ? 0 : 0.26, this.ctx.currentTime, 0.03);
     }
   }
 
-  playTone(freq, dur = 0.1, type = 'sine', gainVal = 0.15, slide = 0) {
+  tone(freq, duration = 0.1, type = 'triangle', volume = 0.18, slideTo = 0) {
     if (!this.ctx || this.muted) return;
-    const t = this.ctx.currentTime;
+    const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
+    const gain = this.ctx.createGain();
 
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (slide !== 0) {
-      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+    osc.frequency.setValueAtTime(Math.max(24, freq), now);
+    if (slideTo > 0) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(24, slideTo), now + duration);
     }
 
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(gainVal, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    osc.connect(g);
-    g.connect(this.master);
-    osc.start(t);
-    osc.stop(t + dur + 0.04);
+    osc.connect(gain);
+    gain.connect(this.master);
+
+    osc.start(now);
+    osc.stop(now + duration + 0.03);
   }
 
-  // Galope rítmico de pezuñas
-  hoofBeat(speed) {
-    if (!this.ctx || this.muted || speed < 0.5) return;
-    const p = 80 + Math.min(speed, 25) * 6;
-    this.playTone(p, 0.035, 'triangle', 0.06, -20);
+  playClick() {
+    this.unlock();
+    this.tone(580, 0.06, 'triangle', 0.14, 820);
   }
 
-  // Sonido de Derrape continuo
-  skidSound() {
+  playCountdownBeep(isFinal = false) {
+    this.unlock();
+    if (isFinal) {
+      this.tone(880, 0.35, 'sawtooth', 0.24, 1180);
+      setTimeout(() => this.playOink(1.25), 90);
+    } else {
+      this.tone(440, 0.16, 'sine', 0.2);
+    }
+  }
+
+  playHoofStep(speed) {
+    if (!this.ctx || this.muted || speed < 1.5) return;
+    const now = this.ctx.currentTime;
+    const interval = Math.max(0.085, 0.26 - speed * 0.007);
+    if (now - this.lastHoofTime >= interval) {
+      this.lastHoofTime = now;
+      const pitch = 95 + Math.min(speed, 26) * 5 + (Math.random() * 18 - 9);
+      this.tone(pitch, 0.04, 'triangle', 0.07, pitch * 0.72);
+    }
+  }
+
+  playDriftSpark(tier = 0) {
     if (!this.ctx || this.muted) return;
-    this.playTone(160 + Math.random() * 50, 0.06, 'sawtooth', 0.035, -40);
+    const now = this.ctx.currentTime;
+    if (now - this.lastSkidTime < 0.075) return;
+    this.lastSkidTime = now;
+    const baseFreq = tier === 3 ? 640 : tier === 2 ? 460 : tier === 1 ? 330 : 210;
+    this.tone(baseFreq + Math.random() * 45, 0.055, 'sawtooth', 0.045, baseFreq * 0.85);
   }
 
-  // Sonido de Ruleta de Objetos
-  rouletteTick() {
-    this.playTone(550, 0.04, 'square', 0.08, 120);
-  }
+  playMiniTurboRelease(tier = 1) {
+    this.unlock();
+    const chords = tier === 3
+      ? [523, 659, 783, 1046]
+      : tier === 2
+      ? [440, 554, 659]
+      : [349, 440, 523];
 
-  // Obtener Objeto Definitivo
-  itemReady() {
-    [523, 659, 783, 1046].forEach((f, i) => {
-      setTimeout(() => this.playTone(f, 0.1, 'triangle', 0.18, 30), i * 50);
+    chords.forEach((f, idx) => {
+      setTimeout(() => {
+        this.tone(f, 0.16, 'sawtooth', 0.16, f * 1.35);
+      }, idx * 45);
     });
   }
 
-  // Mini-Turbos por niveles
-  miniTurbo(tier) {
-    this.wake();
-    const pitches = tier === 1 ? [380, 560] : tier === 2 ? [480, 750] : [620, 1100];
-    pitches.forEach((p, idx) => {
-      setTimeout(() => this.playTone(p, 0.16, 'sawtooth', 0.16, 200), idx * 60);
+  playOink(pitchScale = 1) {
+    this.unlock();
+    this.tone(360 * pitchScale, 0.16, 'sawtooth', 0.2, 180 * pitchScale);
+    setTimeout(() => {
+      this.tone(250 * pitchScale, 0.14, 'triangle', 0.16, 140 * pitchScale);
+    }, 85);
+  }
+
+  playBump() {
+    this.unlock();
+    this.tone(145, 0.18, 'sawtooth', 0.26, 55);
+    this.playOink(0.92);
+  }
+
+  playCoin() {
+    this.unlock();
+    this.tone(987, 0.07, 'sine', 0.14, 1318);
+  }
+
+  playRouletteTick() {
+    this.tone(620 + Math.random() * 160, 0.035, 'square', 0.075);
+  }
+
+  playItemLocked() {
+    [523, 659, 784, 1046].forEach((n, i) => {
+      setTimeout(() => this.tone(n, 0.09, 'triangle', 0.16), i * 45);
     });
   }
 
-  // Oink y Colisiones
-  oink(pitch = 1) {
-    this.wake();
-    this.playTone(390 * pitch, 0.2, 'sawtooth', 0.22, -220);
-    setTimeout(() => this.playTone(250 * pitch, 0.15, 'triangle', 0.16, -90), 80);
+  playLightningThunder() {
+    this.unlock();
+    this.tone(920, 0.42, 'sawtooth', 0.28, 90);
+    setTimeout(() => this.tone(420, 0.35, 'square', 0.22, 65), 110);
   }
 
-  bump() {
-    this.wake();
-    this.playTone(140, 0.18, 'sawtooth', 0.26, -60);
+  playFanfare(win = true) {
+    this.unlock();
+    const notes = win
+      ? [523, 659, 784, 1046, 784, 1046]
+      : [392, 440, 493, 523];
+    notes.forEach((f, i) => {
+      setTimeout(() => this.tone(f, 0.22, 'triangle', 0.2, f * 1.04), i * 130);
+    });
   }
 
-  // Música procedural estilo Country-Arcade (Ragtime / Tour Theme)
   startMusic() {
-    this.wake();
-    if (this.bgmInterval) return;
-    this.step = 0;
+    this.unlock();
+    if (this.bgmTimer) return;
+    this.stepIndex = 0;
 
-    const melody = [
-      392, 440, 493, 587,  523, 440, 392, 329,
-      392, 523, 587, 659,  587, 523, 440, 392,
-      659, 587, 523, 440,  493, 440, 392, 329,
-      349, 392, 440, 493,  523, 587, 659, 783
+    // Melodía alegre estilo Banjo / Kart Arcade
+    const leadNotes = [
+      523, 659, 784, 659, 880, 784, 659, 523,
+      587, 698, 880, 698, 784, 659, 587, 493,
+      523, 659, 784, 1046, 880, 784, 659, 523,
+      587, 659, 698, 784, 880, 987, 1046, 0
     ];
-    const bass = [130, 196, 164, 196];
+    const bassNotes = [130, 196, 146, 196, 130, 196, 164, 196];
 
-    this.bgmInterval = setInterval(() => {
-      if (this.muted) return;
-      // Bajo
-      if (this.step % 2 === 0) {
-        const b = bass[(this.step / 2) % bass.length];
-        this.playTone(b, 0.14, 'sine', 0.12, -20);
+    this.bgmTimer = setInterval(() => {
+      if (this.muted || !this.ctx) return;
+      const step = this.stepIndex;
+
+      if (step % 2 === 0) {
+        const b = bassNotes[(step / 2) % bassNotes.length];
+        this.tone(b, 0.12, 'triangle', 0.09, b * 0.9);
       }
-      // Melodía
-      const m = melody[this.step % melody.length];
-      if (m) {
-        this.playTone(m, 0.08, 'triangle', 0.07, 0);
+
+      const lead = leadNotes[step % leadNotes.length];
+      if (lead > 0) {
+        this.tone(lead, 0.085, 'sine', 0.065, lead * 1.01);
       }
-      this.step++;
+
+      this.stepIndex++;
     }, 135);
   }
 
   stopMusic() {
-    clearInterval(this.bgmInterval);
-    this.bgmInterval = null;
+    if (this.bgmTimer) {
+      clearInterval(this.bgmTimer);
+      this.bgmTimer = null;
+    }
   }
 }
