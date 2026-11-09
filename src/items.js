@@ -1,105 +1,168 @@
 import * as THREE from 'three';
 
-// Sistema de objetos al estilo Mario Kart (Ruleta y proyectiles de granja)
-export const ITEM_TYPES = [
-  { id: 'corn_boost', name: 'Súper Maíz', icon: '🌽', desc: '¡Acelerón instantáneo!' },
-  { id: 'tomato', name: 'Tomate Podrido', icon: '🍅', desc: 'Trampa trasera resbaladiza' },
-  { id: 'beetle', name: 'Escarabajo Apestoso', icon: '🪲', desc: 'Proyectil teledirigido al líder' },
-  { id: 'lightning', name: 'Oink Relámpago', icon: '⚡', desc: 'Encoge y frena a todos los rivales' }
+export const ITEMS_POOL = [
+  { id: 'corn', icon: '🌽', name: 'SÚPER MAÍZ' },
+  { id: 'tomato', icon: '🍅', name: 'TOMATE TRAMPA' },
+  { id: 'beetle', icon: '🪲', name: 'ESCARABAJO GUÍA' },
+  { id: 'lightning', icon: '⚡', name: 'RELÁMPAGO OINK' }
 ];
 
-export class ItemManager {
-  constructor(scene, audio) {
+export class ItemSystem {
+  constructor(scene, sound) {
     this.scene = scene;
-    this.audio = audio;
-    this.traps = [];
-    this.projectiles = [];
+    this.sound = sound;
+    this.hazards = [];
+    this.beetles = [];
+
+    this.tomatoMat = new THREE.MeshStandardMaterial({ color: '#e53935', roughness: 0.25 });
+    this.beetleMat = new THREE.MeshStandardMaterial({
+      color: '#00e676',
+      emissive: '#00a152',
+      emissiveIntensity: 0.4,
+      roughness: 0.3
+    });
   }
 
-  rollRandomItem() {
-    return ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+  pickRandomItem(playerRank = 1) {
+    // Ponderación estilo Mario Kart según posición
+    if (playerRank === 1) {
+      const frontPool = [ITEMS_POOL[0], ITEMS_POOL[1], ITEMS_POOL[1]];
+      return frontPool[Math.floor(Math.random() * frontPool.length)];
+    }
+    return ITEMS_POOL[Math.floor(Math.random() * ITEMS_POOL.length)];
   }
 
-  useItem(item, userPos, userYaw, isPlayer = true, rivals = []) {
-    if (!item) return;
+  activateItem(item, racerState, rivalsList) {
+    if (!item) return null;
 
-    if (item.id === 'corn_boost') {
-      this.audio.miniTurbo(3);
-      return { type: 'boost', power: 7.5, time: 2.0 };
+    if (item.id === 'corn') {
+      this.sound.playMiniTurboRelease(3);
+      return { type: 'boost', duration: 2.1, bonusSpeed: 7.5, banner: '🌽 ¡IMPULSO DE SÚPER MAÍZ!' };
     }
 
     if (item.id === 'tomato') {
-      // Suelta trampa detrás
-      const backX = userPos.x - Math.cos(userYaw) * 1.8;
-      const backZ = userPos.z - Math.sin(userYaw) * 1.8;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.4, 8, 8),
-        new THREE.MeshStandardMaterial({ color: '#d32f2f', roughness: 0.3 })
+      const dropPos = new THREE.Vector3(
+        racerState.x - Math.sin(racerState.yaw) * 2.1,
+        racerState.y + 0.08,
+        racerState.z - Math.cos(racerState.yaw) * 2.1
       );
-      mesh.position.set(backX, 0.3, backZ);
-      this.scene.add(mesh);
-      this.traps.push({ mesh, x: backX, z: backZ, time: 0 });
-      this.audio.playTone(280, 0.12, 'sawtooth', 0.15, -100);
-      return { type: 'trap' };
+      const splat = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.15, 0.14, 12), this.tomatoMat);
+      splat.position.copy(dropPos);
+      this.scene.add(splat);
+
+      this.hazards.push({ mesh: splat, pos: dropPos, life: 18.0 });
+      this.sound.playOink(0.85);
+      return { type: 'trap', banner: '🍅 ¡TOMATE TRAMPA LANZADO!' };
     }
 
     if (item.id === 'beetle') {
-      // Lanza proyectil hacia adelante
-      const projMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 8, 8),
-        new THREE.MeshStandardMaterial({ color: '#2e7d32', emissive: '#1b5e20' })
+      const startPos = new THREE.Vector3(
+        racerState.x + Math.sin(racerState.yaw) * 1.9,
+        racerState.y + 0.5,
+        racerState.z + Math.cos(racerState.yaw) * 1.9
       );
-      projMesh.position.set(userPos.x, 0.5, userPos.z);
-      this.scene.add(projMesh);
-      this.projectiles.push({
-        mesh: projMesh,
-        x: userPos.x,
-        z: userPos.z,
-        yaw: userYaw,
-        speed: 28,
-        life: 4.0
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 10), this.beetleMat);
+      mesh.position.copy(startPos);
+      this.scene.add(mesh);
+
+      this.beetles.push({
+        mesh,
+        pos: startPos,
+        yaw: racerState.yaw,
+        speed: 27.0,
+        life: 5.0
       });
-      this.audio.playTone(600, 0.15, 'triangle', 0.18, 300);
-      return { type: 'projectile' };
+      this.sound.playMiniTurboRelease(2);
+      return { type: 'projectile', banner: '🪲 ¡ESCARABAJO TELEDIGIRIDO!' };
     }
 
     if (item.id === 'lightning') {
-      this.audio.playTone(180, 0.4, 'sawtooth', 0.28, 800);
-      return { type: 'lightning' };
+      this.sound.playLightningThunder();
+      rivalsList.forEach(r => {
+        r.spinTimer = 1.6;
+        r.shrinkTimer = 5.5;
+      });
+      return { type: 'lightning', banner: '⚡ ¡RELÁMPAGO OINK! RIVALES ENCOGIDOS' };
+    }
+
+    return null;
+  }
+
+  update(dt, playerPos, rivalsList, onPlayerSpin) {
+    // Actualizar trampas de tomate
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      h.life -= dt;
+
+      // Comprobar impacto con rivales
+      let consumed = false;
+      for (const r of rivalsList) {
+        if (Math.hypot(r.pos.x - h.pos.x, r.pos.z - h.pos.z) < 1.35 && r.spinTimer <= 0) {
+          r.spinTimer = 1.4;
+          this.sound.playBump();
+          consumed = true;
+          break;
+        }
+      }
+
+      // Comprobar impacto con jugador
+      if (!consumed && Math.hypot(playerPos.x - h.pos.x, playerPos.z - h.pos.z) < 1.25) {
+        onPlayerSpin();
+        consumed = true;
+      }
+
+      if (consumed || h.life <= 0) {
+        this.scene.remove(h.mesh);
+        this.hazards.splice(i, 1);
+      }
+    }
+
+    // Actualizar proyectiles escarabajo (buscan al rival más cercano)
+    for (let i = this.beetles.length - 1; i >= 0; i--) {
+      const b = this.beetles[i];
+      b.life -= dt;
+
+      // Buscar objetivo rival más próximo
+      let nearest = null;
+      let bestDist = 26;
+      for (const r of rivalsList) {
+        const d = Math.hypot(r.pos.x - b.pos.x, r.pos.z - b.pos.z);
+        if (d < bestDist) {
+          bestDist = d;
+          nearest = r;
+        }
+      }
+
+      if (nearest) {
+        const targetYaw = Math.atan2(nearest.pos.x - b.pos.x, nearest.pos.z - b.pos.z);
+        b.yaw = targetYaw;
+      }
+
+      b.pos.x += Math.sin(b.yaw) * b.speed * dt;
+      b.pos.z += Math.cos(b.yaw) * b.speed * dt;
+      b.mesh.position.set(b.pos.x, b.pos.y, b.pos.z);
+
+      let hit = false;
+      for (const r of rivalsList) {
+        if (Math.hypot(r.pos.x - b.pos.x, r.pos.z - b.pos.z) < 1.45) {
+          r.spinTimer = 1.7;
+          this.sound.playBump();
+          hit = true;
+          break;
+        }
+      }
+
+      if (hit || b.life <= 0) {
+        this.scene.remove(b.mesh);
+        this.beetles.splice(i, 1);
+      }
     }
   }
 
-  update(dt, playerX, playerZ, onPlayerHit) {
-    // Actualizar proyectiles
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      const p = this.projectiles[i];
-      p.life -= dt;
-      p.x += Math.cos(p.yaw) * p.speed * dt;
-      p.z += Math.sin(p.yaw) * p.speed * dt;
-      p.mesh.position.set(p.x, 0.5, p.z);
-
-      // Comprobar impacto con el jugador
-      if (Math.hypot(p.x - playerX, p.z - playerZ) < 1.6) {
-        this.scene.remove(p.mesh);
-        this.projectiles.splice(i, 1);
-        onPlayerHit();
-        continue;
-      }
-
-      if (p.life <= 0) {
-        this.scene.remove(p.mesh);
-        this.projectiles.splice(i, 1);
-      }
-    }
-
-    // Comprobar trampas de tomates
-    for (let i = this.traps.length - 1; i >= 0; i--) {
-      const tr = this.traps[i];
-      if (Math.hypot(tr.x - playerX, tr.z - playerZ) < 1.4) {
-        this.scene.remove(tr.mesh);
-        this.traps.splice(i, 1);
-        onPlayerHit();
-      }
-    }
+  clearAll() {
+    this.hazards.forEach(h => this.scene.remove(h.mesh));
+    this.beetles.forEach(b => this.scene.remove(b.mesh));
+    this.hazards = [];
+    this.beetles = [];
   }
 }
