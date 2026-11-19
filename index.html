@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#101a14" />
+  <title>PigRally 8 Deluxe — Carreras de Granja 3D</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.164.1/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <!-- PANTALLA DE CARGA ESTILO MARIO KART 8 DELUXE -->
+  <div id="loading-screen" class="mk-loading-overlay">
+    <div class="mk-checker-top"></div>
+    <div class="mk-loading-card">
+      <div class="mk-loading-left">
+        <div class="mk-emblem">
+          <div class="mk-emblem-ring"></div>
+          <span>🐷</span>
+        </div>
+        <div class="mk-loading-meta">
+          <div id="loading-badges" class="mk-badges">
+            <span class="mk-pill accent">PIGRALLY 8 DELUXE</span>
+            <span class="mk-pill">150cc</span>
+          </div>
+          <h1 id="loading-title">CARGANDO GRANERO...</h1>
+          <p id="loading-subtitle">Preparando circuitos, alas y 12 corredores</p>
+        </div>
+      </div>
+
+      <div class="mk-loading-preview">
+        <canvas id="loading-track-canvas" width="200" height="140"></canvas>
+      </div>
+    </div>
+
+    <div class="mk-loading-footer">
+      <div class="mk-tip-box">
+        <span class="mk-tip-tag">CONSEJO</span>
+        <p id="loading-tip">Pulsa Derrape en las curvas y espera a las chispas azules, naranjas o rosas para soltar un Mini-Turbo.</p>
+      </div>
+      <div class="mk-progress-wrap">
+        <div class="mk-progress-track">
+          <div id="loading-bar-fill" class="mk-progress-fill"></div>
+        </div>
+        <strong id="loading-percent">0%</strong>
+      </div>
+    </div>
+    <div class="mk-checker-bottom"></div>
+  </div>
+
+  <!-- MENÚ DE ENTRADA (SPLASH) -->
+  <div id="splash-screen" class="screen hidden">
+    <div class="splash-content">
+      <span class="badge">EDICIÓN 8 DELUXE • 50cc / 150cc / 200cc</span>
+      <h1 class="splash-title">PIG<span>RALLY</span> 8</h1>
+      <p class="splash-sub">12 cerdos a cuatro patas, vuelos con alas, doble objeto, barrancos y derrapes turbo</p>
+      <button id="btn-enter-game" class="btn-primary btn-big">ENTRAR AL GRANERO</button>
+      <div class="splash-wallet">🪙 <strong id="splash-coins">0</strong> Monedas guardadas</div>
+    </div>
+  </div>
+
+  <!-- AVISO DE ROTACIÓN -->
+  <div id="rotate-overlay" class="overlay hidden">
+    <div class="rotate-card">
+      <div class="phone-icon">📱</div>
+      <h2>Gira tu móvil</h2>
+      <p>PigRally 8 Deluxe está optimizado para jugarse en horizontal.</p>
+      <button id="dismiss-rotate" class="btn-secondary">Continuar así</button>
+    </div>
+  </div>
+
+  <!-- MENÚ PRINCIPAL / GRANERO / TIENDA -->
+  <div id="menu-screen" class="screen hidden">
+    <header class="top-bar">
+      <div class="brand">
+        <h1>PIG<span>RALLY</span> 8</h1>
+        <div class="wallet-pill">🪙 <strong id="menu-coins">0</strong></div>
+      </div>
+
+      <nav class="main-tabs">
+        <button class="tab-btn active" data-tab="race">🏁 Carrera</button>
+        <button class="tab-btn" data-tab="pigs">🐷 Cerdos</button>
+        <button class="tab-btn" data-tab="shop">🛒 Tienda</button>
+      </nav>
+
+      <div class="top-actions">
+        <button id="btn-gyro-toggle" class="chip-btn">🧭 Giro: <strong id="gyro-status">OFF</strong></button>
+        <button id="btn-sound-toggle" class="chip-btn">🔊</button>
+      </div>
+    </header>
+
+    <div class="menu-layout">
+      <!-- PANEL IZQUIERDO -->
+      <section class="panel left-panel">
+        <!-- Pestaña 1: Modos, Cilindrada y Opciones de Física -->
+        <div id="tab-race" class="tab-content">
+          <h3>CILINDRADA</h3>
+          <div id="cc-selector" class="cc-grid">
+            <button class="cc-btn" data-cc="50cc">50cc<small>Suave</small></button>
+            <button class="cc-btn active" data-cc="150cc">150cc<small>Normal</small></button>
+            <button class="cc-btn" data-cc="200cc">200cc<small>Extremo</small></button>
+          </div>
+
+          <h3>MODO DE JUEGO</h3>
+          <div id="mode-list" class="card-list"></div>
+
+          <h3>AJUSTES DE CONDUCCIÓN</h3>
+          <div class="toggles-grid">
+            <button id="btn-collision-toggle" class="toggle-chip active">💥 Choques Hitbox: <strong id="collision-status">ON</strong></button>
+            <button id="btn-smart-toggle" class="toggle-chip">🛡️ Volante Inteligente: <strong id="smart-status">OFF</strong></button>
+            <button id="btn-autoaccel-toggle" class="toggle-chip">⚡ Auto-Acelerar: <strong id="autoaccel-status">OFF</strong></button>
+          </div>
+        </div>
+
+        <!-- Pestaña 2: Cerdos -->
+        <div id="tab-pigs" class="tab-content hidden">
+          <h3>CORREDORES (8)</h3>
+          <div id="pig-list" class="card-list"></div>
+          <div class="stats-box">
+            <div class="stat-row"><span>Velocidad</span><div class="bar"><div id="stat-speed" class="fill"></div></div></div>
+            <div class="stat-row"><span>Aceleración</span><div class="bar"><div id="stat-accel" class="fill"></div></div></div>
+            <div class="stat-row"><span>Manejo</span><div class="bar"><div id="stat-grip" class="fill"></div></div></div>
+            <div class="stat-row"><span>Vuelo/Turbo</span><div class="bar"><div id="stat-boost" class="fill"></div></div></div>
+          </div>
+        </div>
+
+        <!-- Pestaña 3: Tienda -->
+        <div id="tab-shop" class="tab-content hidden">
+          <h3>TIENDA Y PERSONALIZACIÓN</h3>
+          <div class="shop-subtabs">
+            <button class="subtab-btn active" data-cat="wings">🪽 Alas</button>
+            <button class="subtab-btn" data-cat="hats">🎩 Gorros</button>
+            <button class="subtab-btn" data-cat="tattoos">🔥 Tatuajes</button>
+          </div>
+          <div id="shop-list" class="card-list"></div>
+        </div>
+      </section>
+
+      <!-- CENTRO 3D -->
+      <div class="center-stage">
+        <div class="pig-banner">
+          <h2 id="selected-pig-name">Landrace Sprint</h2>
+          <p id="selected-pig-desc">Equilibrado y manejable.</p>
+          <small id="equipped-summary"></small>
+        </div>
+        <button id="btn-start-race" class="btn-primary">¡CORRER AHORA!</button>
+      </div>
+
+      <!-- PANEL DERECHO: MAPAS -->
+      <section class="panel right-panel">
+        <h3>CIRCUITOS DE GRANJA (5)</h3>
+        <div id="track-list" class="card-list"></div>
+        <div id="record-box" class="record-box">Récord Contrarreloj: --:--.-</div>
+        <div class="controls-hint">
+          <strong>PC:</strong> Flechas/WASD • Shift (Derrape) • Espacio (Turbo/Truco) • E (Objeto) • C (Retrovisor)
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- HUD EN CARRERA -->
+  <div id="hud-screen" class="screen hidden">
+    <div class="hud-top">
+      <div class="hud-pill position-pill">
+        <span class="label">POS</span>
+        <strong id="hud-pos">1</strong><small id="hud-total">/12</small>
+      </div>
+      <div class="hud-pill lap-pill">
+        <span class="label">VUELTA</span>
+        <strong id="hud-lap">1/3</strong>
+      </div>
+      <div class="hud-pill time-pill">
+        <span class="label">TIEMPO</span>
+        <strong id="hud-time">00:00.0</strong>
+      </div>
+      <div class="hud-pill coin-pill">
+        <span>🪙</span><strong id="hud-coins">0</strong>
+      </div>
+      <div id="hud-cc-badge" class="hud-pill cc-pill">150cc</div>
+
+      <!-- Doble ranura de objeto estilo Mario Kart 8 Deluxe -->
+      <div class="double-item-wrap">
+        <button id="hud-item-1" class="item-slot primary" title="Usar objeto (E)">
+          <span id="hud-item-1-icon">—</span>
+          <small id="hud-item-1-name">OBJETO</small>
+        </button>
+        <div class="item-slot secondary" title="Siguiente objeto">
+          <span id="hud-item-2-icon">·</span>
+        </div>
+      </div>
+
+      <div class="hud-right-tools">
+        <canvas id="minimap-canvas" width="124" height="124"></canvas>
+        <div class="hud-mini-btns">
+          <button id="btn-rearview" class="icon-btn" title="Retrovisor (C)">🪞</button>
+          <button id="btn-calibrate" class="icon-btn hidden" title="Calibrar giroscopio">🎯</button>
+          <button id="btn-pause" class="icon-btn" title="Pausa">⏸</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="farmer-bubble" class="farmer-bubble hidden">
+      <span class="farmer-avatar">👨‍🌾</span>
+      <div>
+        <strong id="farmer-name">Granjero Paco</strong>
+        <p id="farmer-text">¡Dale caña!</p>
+      </div>
+    </div>
+
+    <div id="wrong-way-banner" class="wrong-way hidden">⚠️ ¡DIRECCIÓN CONTRARIA!</div>
+    <div id="event-banner" class="event-banner hidden">¡MINI-TURBO!</div>
+    <div id="countdown" class="countdown hidden">3</div>
+
+    <div class="hud-bottom-center">
+      <div class="speedo">
+        <strong id="hud-speed">0</strong>
+        <span>KM/H</span>
+      </div>
+      <div class="turbo-wrap">
+        <div class="turbo-label" id="hud-state-label">OINK TURBO</div>
+        <div class="turbo-bar"><div id="hud-turbo-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Controles táctiles móvil -->
+    <div id="touch-controls">
+      <div class="touch-left">
+        <button id="touch-left-btn" class="touch-pad">◀</button>
+        <button id="touch-right-btn" class="touch-pad">▶</button>
+      </div>
+      <div class="touch-right">
+        <button id="touch-item-btn" class="touch-action item">OBJETO</button>
+        <button id="touch-drift-btn" class="touch-action drift">DERRAPE</button>
+        <button id="touch-turbo-btn" class="touch-action turbo">TURBO</button>
+        <button id="touch-brake-btn" class="touch-action brake">FRENO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PAUSA / RESULTADOS -->
+  <div id="modal-overlay" class="overlay hidden">
+    <div class="modal-card">
+      <h2 id="modal-title">¡CARRERA TERMINADA!</h2>
+      <p id="modal-subtitle">Posición final: 1º</p>
+      <div id="modal-reward" class="reward-pill hidden">+50 🪙 Monedas ganadas</div>
+      <div id="modal-results" class="results-list"></div>
+      <div class="modal-actions">
+        <button id="btn-next-cup" class="btn-primary hidden">Siguiente Circuito →</button>
+        <button id="btn-resume" class="btn-primary hidden">Continuar</button>
+        <button id="btn-restart" class="btn-primary">Repetir</button>
+        <button id="btn-back-menu" class="btn-secondary">Volver al Granero</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
